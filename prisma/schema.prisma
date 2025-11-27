@@ -1,14 +1,69 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma Schema - AI Service
+// Database: cropfresh_ai
+// Purpose: AI models, predictions, training data
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// Model Model - AI models metadata
+model Model {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique @db.VarChar(100)
+  version     String    @db.VarChar(20)
+  type        ModelType
+  accuracy    Decimal?  @db.Decimal(5, 4)
+  status      ModelStatus @default(TRAINING)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  predictions Prediction[]
+
+  @@map("models")
+}
+
+// Prediction Model
+model Prediction {
+  id          Int       @id @default(autoincrement())
+  modelId     Int       @map("model_id")
+  inputData   Json      @map("input_data")
+  outputData  Json      @map("output_data")
+  confidence  Decimal?  @db.Decimal(5, 4)
+  timestamp   DateTime  @default(now()) @db.Timestamptz(6)
+
+  model       Model     @relation(fields: [modelId], references: [id])
+
+  @@map("predictions")
+}
+
+// TrainingData Model
+model TrainingData {
+  id          Int       @id @default(autoincrement())
+  modelType   ModelType @map("model_type")
+  features    Json
+  label       Json
+  timestamp   DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("training_data")
+}
+
+enum ModelType {
+  QUALITY_GRADING
+  PRICE_PREDICTION
+  SHELF_LIFE
+  DEMAND_FORECAST
+  ROUTE_OPTIMIZATION
+}
+
+enum ModelStatus {
+  TRAINING
+  ACTIVE
+  DEPRECATED
+  ARCHIVED
 }
