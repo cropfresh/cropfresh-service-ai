@@ -3,6 +3,7 @@ import './tracing';
 
 import { GrpcServer } from './grpc/server';
 import { aiServiceHandlers } from './grpc/services/ai';
+import { photoValidationGrpcHandlers } from './grpc/services/photo-validation';
 import path from 'path';
 import express from 'express';
 import { logger } from './utils/logger';
@@ -49,18 +50,23 @@ export default app;
 const GRPC_PORT = parseInt(process.env.GRPC_PORT || '50051', 10);
 const PROTO_PATH = path.join(__dirname, '../protos/proto/ai.proto');
 const PACKAGE_NAME = 'cropfresh.ai';
-const SERVICE_NAME_GRPC = 'Service';
 
 (async () => {
   try {
     const grpcServer = new GrpcServer(GRPC_PORT, logger);
     const packageDef = grpcServer.loadProto(PROTO_PATH);
     const proto = packageDef.cropfresh.ai as any;
-    const serviceDef = proto[SERVICE_NAME_GRPC].service;
 
-    grpcServer.addService(serviceDef, aiServiceHandlers(logger));
+    // Register AIService handlers
+    const aiServiceDef = proto['AIService'].service;
+    grpcServer.addService(aiServiceDef, aiServiceHandlers(logger));
+
+    // Register PhotoValidationService handlers (Story 3.2)
+    const photoValidationServiceDef = proto['PhotoValidationService'].service;
+    grpcServer.addService(photoValidationServiceDef, photoValidationGrpcHandlers(logger));
 
     await grpcServer.start();
+    logger.info('Registered services: AIService, PhotoValidationService');
   } catch (err) {
     logger.error(err, 'Failed to start gRPC server');
   }
